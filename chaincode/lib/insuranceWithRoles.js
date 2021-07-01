@@ -13,20 +13,22 @@ const ClaimStatus = require('./claimStatus');
 const InsuranceState = require('./insuranceClaimState');
 
 class Insurance extends Contract {
-    async fileClaim(ctx, policyNumber, carMaker, carModel, carYear, carRegistration, licencePlateNumber,
-        driverName, licenceNumber,
-        accidentDate, accidentLocation, injuriesExtent, numberOfPassengers, vehicleDamageExtent, accidentDescription, investigatingOfficer) {
-        const cid = new ClientIdentity(ctx.stub);
-        if (cid.assertAttributeValue('hf.role', 'driver')) {
-            throw new Error('Only drivers can file new claims.');
-        }
+    async fileClaim(ctx, claimDataJson) {
+        this.checkRoleIsValid(ctx, 'driver');
 
-        const claim = new CarAccidentInsuranceClaim(policyNumber);
-        claim.setCarDetails(carMaker, carModel, carYear, carRegistration, licencePlateNumber);
-        claim.setAccidentDetails(driverName, licenceNumber);
-        claim.setMainDetails(accidentDate, accidentLocation, injuriesExtent, numberOfPassengers, vehicleDamageExtent, accidentDescription, investigatingOfficer);
+        const claim = JSON.parse(claimDataJson);
+        const id = claim.;
 
         await ctx.stub.putState(new InsuranceState(ClaimStatus.Filed, claim));
+    }
+
+    checkRoleIsValid(ctx, ...allowedRoles) {
+        const role = ctx.clientIdentity.getAttributeValue('role');
+        const isValidRole = role && allowedRoles.includes(role);
+
+        if (!isValidRole) {
+            throw new Error('Current user cannot perform this operation.');
+        }
     }
 
     async rejectClaim(ctx) {
