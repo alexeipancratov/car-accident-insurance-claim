@@ -14,6 +14,7 @@ import { describe } from 'mocha';
 import { CarAccidentInsuranceClaim } from './models/car-accident-insurance-claim';
 import { CarInsuranceContract } from './car-insurance-contract';
 import { CLAIMS_ADJUSTER, DRIVER } from './roles';
+import { ClaimStatus } from './models/claim-status';
 
 chai.should();
 chai.use(chaiAsPromised);
@@ -74,7 +75,27 @@ describe('CarInsuranceContract', () => {
             "investigatingOfficer": "Rob Johnson, #123",
             "numberOfPassengers": 3,
             "policyNumber": "P11123415",
-            "vehicleDamageExtent": "Mild"
+            "vehicleDamageExtent": "Mild",
+            "status": 1
+        }`));
+        ctx.stub.getState.withArgs('1002').resolves(Buffer.from(`{
+            "id": "1001",
+            "accidentDate": "2021-06-30T21:06:16.727Z",
+            "accidentDescription": "Mild crash at a intersection",
+            "accidentLocation": "Toronto, ON",
+            "carLicensePlateNumber": "CCDN5",
+            "carMake": "BMW",
+            "carManufactureYear": 2017,
+            "carModel": "X6",
+            "carRegistration": "CAN",
+            "driverLicenseNumber": "112BBA",
+            "driverName": "John Doe",
+            "injuriesExtent": "Mild",
+            "investigatingOfficer": "Rob Johnson, #123",
+            "numberOfPassengers": 3,
+            "policyNumber": "P11123415",
+            "vehicleDamageExtent": "Mild",
+            "status": 3
         }`));
     });
 
@@ -133,6 +154,7 @@ describe('CarInsuranceContract', () => {
             expectedClaim.numberOfPassengers = 3;
             expectedClaim.policyNumber = 'P11123415';
             expectedClaim.vehicleDamageExtent = 'Mild';
+            expectedClaim.status = ClaimStatus.Filed;
 
             await contract.getClaim(ctx, '1001').should.eventually.deep.equal(expectedClaim);
         });
@@ -144,6 +166,39 @@ describe('CarInsuranceContract', () => {
         it('should throw an error for a user role other than DRIVER, CLAIMS_ADJUSTER or INSURANCE_COMPANY_MANAGER', async () => {
             ctx.clientIdentity.getAttributeValue.withArgs('role').returns('invalidRole');
             await contract.getClaim(ctx, '1001').should.be.rejectedWith(/Current user cannot perform this operation./);
+        });
+    });
+
+    describe('#rejectClaim', () => {
+        it('should successfully reject an existing claim in Filed status', async () => {
+            const claimId = '1001';
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
+
+            await contract.rejectClaim(ctx, claimId);
+
+            ctx.stub.putState.should.have.been.calledWith(claimId, sinon.match((data: Buffer) => {
+                const rejectedClaim = JSON.parse(data.toString()) as CarAccidentInsuranceClaim;
+
+                return rejectedClaim.status === ClaimStatus.Rejected;
+            }));
+        });
+
+        it('should throw an error if claim is not in Filed status', async () => {
+            const claimId = '1002';
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
+
+            await contract.rejectClaim(ctx, claimId).should.be.rejectedWith(/Cannot reject a claim in status/);
+        });
+
+        it('should throw an error if claim doesn\'t exist', async () => {
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
+
+            await contract.rejectClaim(ctx, '2000').should.be.rejectedWith(/The claim 2000 does not exist/);
+        });
+
+        it('should throw an error for a user role other than CLAIMS_ADJUSTER or INSURANCE_COMPANY_MANAGER', async () => {
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(DRIVER);
+            await contract.rejectClaim(ctx, '1001').should.be.rejectedWith(/Current user cannot perform this operation./);
         });
     });
 });
