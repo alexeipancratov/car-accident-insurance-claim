@@ -13,7 +13,7 @@ import winston = require('winston');
 import { describe } from 'mocha';
 import { CarAccidentInsuranceClaim } from './models/car-accident-insurance-claim';
 import { CarInsuranceContract } from './car-insurance-contract';
-import { CLAIMS_ADJUSTER, DRIVER } from './roles';
+import { CLAIMS_ADJUSTER, DRIVER, INSURANCE_COMPANY_MANAGER } from './roles';
 import { ClaimStatus } from './models/claim-status';
 
 chai.should();
@@ -203,7 +203,7 @@ describe('CarInsuranceContract', () => {
     });
 
     describe('#establishCoverage', () => {
-        it('should successfully establish coverage an existing claim in Filed status', async () => {
+        it('should successfully establish coverage for an existing claim in Filed status', async () => {
             const claimId = '1001';
             const coverageAmount = 100.50;
             ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
@@ -221,7 +221,7 @@ describe('CarInsuranceContract', () => {
             const claimId = '1002';
             ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
 
-            await contract.establishCoverage(ctx, claimId, 100).should.be.rejectedWith(/Cannot reject a claim in status.*/);
+            await contract.establishCoverage(ctx, claimId, 100).should.be.rejectedWith(/Cannot establish coverage for a claim in status.*/);
         });
 
         it('should throw an error if claim doesn\'t exist', async () => {
@@ -233,6 +233,39 @@ describe('CarInsuranceContract', () => {
         it('should throw an error for a user role other than CLAIMS_ADJUSTER', async () => {
             ctx.clientIdentity.getAttributeValue.withArgs('role').returns(DRIVER);
             await contract.rejectClaim(ctx, '1001').should.be.rejectedWith(/Current user cannot perform this operation./);
+        });
+    });
+
+    describe('#closeClaim', () => {
+        it('should successfully close an existing claim in CoverageEstablished status', async () => {
+            const claimId = '1002';
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(INSURANCE_COMPANY_MANAGER);
+
+            await contract.closeClaim(ctx, claimId);
+
+            ctx.stub.putState.should.have.been.calledWith(claimId, sinon.match((data: Buffer) => {
+                const rejectedClaim = JSON.parse(data.toString()) as CarAccidentInsuranceClaim;
+
+                return rejectedClaim.status === ClaimStatus.CoverageIsPaid;
+            }));
+        });
+
+        it('should throw an error if claim is not in CoverageEstablished status', async () => {
+            const claimId = '1001';
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(INSURANCE_COMPANY_MANAGER);
+
+            await contract.closeClaim(ctx, claimId).should.be.rejectedWith(/Cannot close claim in status.*/);
+        });
+
+        it('should throw an error if claim doesn\'t exist', async () => {
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(INSURANCE_COMPANY_MANAGER);
+
+            await contract.closeClaim(ctx, '2000').should.be.rejectedWith(/The claim 2000 does not exist/);
+        });
+
+        it('should throw an error for a user role other than INSURANCE_COMPANY_MANAGER', async () => {
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(DRIVER);
+            await contract.closeClaim(ctx, '1001').should.be.rejectedWith(/Current user cannot perform this operation./);
         });
     });
 });

@@ -84,7 +84,7 @@ export class CarInsuranceContract extends Contract {
 
         const claim = await this.readClaim(ctx, claimId);
         if (claim.status !== ClaimStatus.Filed) {
-            throw new Error(`Cannot reject a claim in status ${claim.status}`);
+            throw new Error(`Cannot establish coverage for a claim in status ${claim.status}`);
         }
         claim.coverageAmount = coverageAmount;
         claim.status = ClaimStatus.CoverageEstablished;
@@ -96,11 +96,18 @@ export class CarInsuranceContract extends Contract {
     public async closeClaim(ctx: Context, claimId: string) {
         this.checkRoleIsValid(ctx, INSURANCE_COMPANY_MANAGER);
 
-        const stateAsBytes = await ctx.stub.getState(claimId);
-        const state = JSON.parse(stateAsBytes.toString());
-        state.status = ClaimStatus.CoverageIsPaid;
+        const exists: boolean = await this.claimExists(ctx, claimId);
+        if (!exists) {
+            throw new Error(`The claim ${claimId} does not exist.`);
+        }
 
-        return ctx.stub.putState(claimId, Buffer.from(JSON.stringify(state)));
+        const claim = await this.readClaim(ctx, claimId);
+        if (claim.status !== ClaimStatus.CoverageEstablished) {
+            throw new Error(`Cannot close claim in status ${claim.status}`);
+        }
+        claim.status = ClaimStatus.CoverageIsPaid;
+
+        return ctx.stub.putState(claimId, Buffer.from(JSON.stringify(claim)));
     }
 
     private async claimExists(ctx: Context, claimId: string): Promise<boolean> {
