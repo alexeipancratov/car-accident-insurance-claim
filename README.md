@@ -1,5 +1,5 @@
 # Car Accident Insurance Claim
-Car Accident Insurance Claim chaincode for the Hyperledger Fabric
+Car Accident Insurance Claim chaincode for the Hyperledger Fabric based on the FSRA Ontario - https://www.fsrao.ca/consumers/auto-insurance/after-accident-understanding-claims-process
 
 ## Business logic states
 Chaincode business logic can go through several states:
