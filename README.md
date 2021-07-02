@@ -1,6 +1,6 @@
 # Car Accident Insurance Claim
 
-<div style="text-align:center"><img src="https://user-images.githubusercontent.com/3188163/124211350-a0875b00-daf5-11eb-9b11-881917e4737f.png" /></div>
+![Card Insurance logo](https://user-images.githubusercontent.com/3188163/124211350-a0875b00-daf5-11eb-9b11-881917e4737f.png)
 
 Car Accident Insurance Claim chaincode for the Hyperledger Fabric based on the FSRA Ontario - https://www.fsrao.ca/consumers/auto-insurance/after-accident-understanding-claims-process
 
