@@ -201,4 +201,38 @@ describe('CarInsuranceContract', () => {
             await contract.rejectClaim(ctx, '1001').should.be.rejectedWith(/Current user cannot perform this operation./);
         });
     });
+
+    describe('#establishCoverage', () => {
+        it('should successfully establish coverage an existing claim in Filed status', async () => {
+            const claimId = '1001';
+            const coverageAmount = 100.50;
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
+
+            await contract.establishCoverage(ctx, claimId, coverageAmount);
+
+            ctx.stub.putState.should.have.been.calledWith(claimId, sinon.match((data: Buffer) => {
+                const rejectedClaim = JSON.parse(data.toString()) as CarAccidentInsuranceClaim;
+
+                return rejectedClaim.coverageAmount === coverageAmount && rejectedClaim.status === ClaimStatus.CoverageEstablished;
+            }));
+        });
+
+        it('should throw an error if claim is not in Filed status', async () => {
+            const claimId = '1002';
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
+
+            await contract.establishCoverage(ctx, claimId, 100).should.be.rejectedWith(/Cannot reject a claim in status.*/);
+        });
+
+        it('should throw an error if claim doesn\'t exist', async () => {
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(CLAIMS_ADJUSTER);
+
+            await contract.establishCoverage(ctx, '2000', 100).should.be.rejectedWith(/The claim 2000 does not exist/);
+        });
+
+        it('should throw an error for a user role other than CLAIMS_ADJUSTER', async () => {
+            ctx.clientIdentity.getAttributeValue.withArgs('role').returns(DRIVER);
+            await contract.rejectClaim(ctx, '1001').should.be.rejectedWith(/Current user cannot perform this operation./);
+        });
+    });
 });

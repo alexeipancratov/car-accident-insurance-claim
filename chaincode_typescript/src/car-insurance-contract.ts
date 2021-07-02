@@ -77,12 +77,19 @@ export class CarInsuranceContract extends Contract {
     public async establishCoverage(ctx: Context, claimId: string, coverageAmount: number) {
         this.checkRoleIsValid(ctx, CLAIMS_ADJUSTER);
 
-        const stateAsBytes = await ctx.stub.getState(claimId);
-        const state = JSON.parse(stateAsBytes.toString());
-        state.coverageAmount = coverageAmount;
-        state.status = ClaimStatus.CoverageEstablished;
+        const exists: boolean = await this.claimExists(ctx, claimId);
+        if (!exists) {
+            throw new Error(`The claim ${claimId} does not exist.`);
+        }
 
-        return ctx.stub.putState(claimId, Buffer.from(JSON.stringify(state)));
+        const claim = await this.readClaim(ctx, claimId);
+        if (claim.status !== ClaimStatus.Filed) {
+            throw new Error(`Cannot reject a claim in status ${claim.status}`);
+        }
+        claim.coverageAmount = coverageAmount;
+        claim.status = ClaimStatus.CoverageEstablished;
+
+        return ctx.stub.putState(claimId, Buffer.from(JSON.stringify(claim)));
     }
 
     @Transaction()
