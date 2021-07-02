@@ -1,6 +1,8 @@
 # Car Accident Insurance Claim
 Car Accident Insurance Claim chaincode for the Hyperledger Fabric based on the FSRA Ontario - https://www.fsrao.ca/consumers/auto-insurance/after-accident-understanding-claims-process
 
+<div style="text-align:center"><img src="https://user-images.githubusercontent.com/3188163/124211350-a0875b00-daf5-11eb-9b11-881917e4737f.png" /></div>
+
 ## Business logic states
 Chaincode business logic can go through several states:
 * No claim (invalid state)
