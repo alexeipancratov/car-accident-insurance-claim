@@ -3,7 +3,7 @@ Car Accident Insurance Claim chaincode for the Hyperledger Fabric
 
 ## Business logic states
 Chaincode business logic can go through several states:
-* No claim
+* No claim (invalid state)
 * Claim filed
 * Claim rejected
 * Coverage Established
